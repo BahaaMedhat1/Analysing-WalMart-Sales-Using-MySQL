@@ -38,63 +38,138 @@ The Walmart sales dataset contains transactional data from three store branches 
 - **Branch A** had the highest average product rating.
 
 ---
+## Advanced SQL Operations
 
-## Dataset Metadata
+### Feature Engineering
+#### 1. Add a Column for Time Grouping (Morning, Afternoon, Evening)
+```sql
+ALTER TABLE walsales
+ADD COLUMN time_group varchar(200);
 
-- **Source**: Walmart Sales Data
-- **Rows**: 1,000
-- **Columns**: 17
-- **Features**:
-  - `Invoice ID`: Unique identifier for each transaction.
-  - `Branch`: Store branch (A, B, C).
-  - `City`: Location of the branch (Yangon, Naypyitaw, Mandalay).
-  - `Customer Type`: Type of customer (Member or Normal).
-  - `Gender`: Gender of the customer.
-  - `Product Line`: Product categories such as Health and Beauty, Electronic Accessories, etc.
-  - `Unit Price`: Price per unit of the product.
-  - `Quantity`: Quantity of items sold in a transaction.
-  - `Tax 5%`: 5% tax applied to the total sales.
-  - `Total`: Total amount including tax.
-  - `Date`: Date of the transaction.
-  - `Time`: Time of the transaction.
-  - `Payment`: Payment method (Ewallet, Cash, Credit Card).
-  - `COGS`: Cost of goods sold.
-  - `Gross Margin Percentage`: Percentage profit margin.
-  - `Gross Income`: Gross income from the transaction.
-  - `Rating`: Customer satisfaction rating.
+SELECT time,
+    CASE 
+		WHEN `time` BETWEEN "00:00:00" AND "12:00:00" THEN "Morning"
+        WHEN `time` BETWEEN "12:01:00" AND "16:00:00" THEN "Afternoon"
+		ELSE "Evening"
+    END AS time_group
+FROM walsales;
+
+UPDATE walsales
+SET time_group = (CASE 
+					 WHEN `time` BETWEEN "00:00:00" AND "12:00:00" THEN "Morning"
+					 WHEN `time` BETWEEN "12:01:00" AND "16:00:00" THEN "Afternoon"
+				     ELSE "Evening"
+				  END );
+```
+
+#### 2. Add a Column for Day Name and Month Name
+```sql
+-- ADD Day_name Column
+ALTER TABLE walsales
+ADD COLUMN Day_name varchar(100);
+
+SELECT date,
+    DAYNAME(date) AS day_name
+FROM walsales;
+
+UPDATE walsales
+SET day_name = DAYNAME(date);
+
+
+-- ADD Month_name Column
+ALTER TABLE walsales
+ADD COLUMN month_name varchar(100);
+
+SELECT date,
+    MONTHNAME(date) AS month_name
+FROM walsales;
+
+UPDATE walsales
+SET month_name = MONTHNAME(date);
+
+```
+
+
 
 ---
 
+
 ## SQL Queries and Analysis
 
-### Feature Engineering:
-- **Time Clustering**: Grouped transaction times into Morning, Afternoon, and Evening.
-- **Day Name Extraction**: Extracted the day of the week from the `Date` column.
-- **Month Name Extraction**: Extracted the month name for monthly trend analysis.
+### 1. Product Analysis
+#### 1. Fetch Each Product Line and Categorize Them as "Good" or "Bad" Based on Average Sales
+```sql
+SELECT product_line,
+    ROUND(AVG(total), 2) AS total_sales,
+    CASE
+		WHEN ROUND(AVG(total), 2) > (SELECT ROUND(AVG(total), 2) FROM walsales) THEN "Good"
+        ELSE "Bad"
+	END AS cluster_sales
+FROM walsales
+GROUP BY product_line
+ORDER BY 2 DESC;
+```
 
-### Business Questions Addressed:
-#### General Analysis:
-- Number of unique cities and branches.
+#### 2. What Is the Most Common Product Line by Gender?
+```sql
+SELECT gender,
+    product_line,
+    COUNT(product_line) AS cnt
+FROM walsales
+GROUP BY gender, product_line
+ORDER BY 2 DESC, 3 DESC;
+```
 
-#### Product Analysis:
-- Best-selling product lines.
-- Most common payment methods.
-- Total revenue by product line and month.
+#### 3. What Is the Average Rating of Each Product Line?
+```sql
+SELECT product_line,
+    ROUND(AVG(rating), 2) AS avg_round
+FROM walsales
+GROUP BY product_line
+ORDER BY 2 DESC;
+```
+--- 
 
-#### Customer Insights:
-- Customer types with the most purchases and revenue.
-- Ratings analysis by day, branch, and time of day.
+### 2.Customer Analysis
+#### 1. Which Day of the Week Has the Best Average Ratings per Branch?
+```sql
+SELECT day_name,
+    branch,
+    ROUND(AVG(rating), 2) AS avg_rating
+FROM walsales
+GROUP BY day_name, branch
+HAVING ROUND(AVG(rating), 2) > (SELECT AVG(rating) FROM walsales)
+ORDER BY 1 ASC;
+```
 
-#### Branch and Sales Performance:
-- Branch with the highest revenue.
-- Time of day with the highest sales.
+#### 2. Which Time of Day Do Customers Give Most Ratings?
+```sql
+SELECT day_name,
+    ROUND(AVG(rating), 2) AS rating
+FROM walsales
+GROUP BY day_name
+ORDER BY 2 DESC;
+```
 
+#### 3. Which Customer Type Buys the Most?
+```sql
+SELECT customer_type,
+    ROUND(SUM(total)) AS total
+FROM walsales
+GROUP BY customer_type;
+```
 ---
 
 ## Tools
 
 - **Database**: MySQL
-- **IDE**: MySQL Workbench
 - **Data Source**: Walmart Sales Data CSV
+---
+
+## Contact
+
+If you have any questions or suggestions regarding this project, feel free to reach out:
+- **Email**: [bahawanas427@gmail.com](mailto:bahawanas427@gmail.com)
+- **LinkedIn**: [Bahaa Wanas](https://www.linkedin.com/in/bahaa-wanas-9797b923a)
 
 ---
